@@ -1,16 +1,40 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
+import sys
+
+import shutil
+
+from main.dataset.generic_image_age_dataset import GenericImageAgeDataset
+from main.dataset.raw_crawled_dataset import RawCrawledDataset
 from main.filter.advanced.age_estimation_filter import AgeEstimationFilter
 from main.filter.advanced.face_detection_filter import FaceDetectionFilter
 from main.filter.multifilter import Multifilter
 from main.filter_clustering.age_range_clustering import AgeRangeClustering
 from main.filter_clustering.bounding_box_clustering import BoundingBoxClustering
 from main.resource.image import Image
+from main.tools.age_range import AgeRange
 
 __author__ = "Ivan de Paz Centeno"
 
+SAVE_BATCH_AMMOUNT = 200
+
+if len(sys.argv) != 2:
+    print("A parameter for folder/zip location of the processable dataset is needed.")
+    exit(-1)
+
+source = sys.argv[1]
+
+if not os.path.exists(source):
+    print("Given folder/filename does not exist.")
+    exit(-1)
+
+if os.path.isdir(source): source_type = "DIR"
+else: source_type = "FILE"
+
+
 BACKEND = 'http://192.168.2.110:9095'
-MAX_FACES = 1
+#MAX_FACES = 1
 
 TYPE_MAP = {
     "face-detection": "detection-requests/faces",
@@ -20,15 +44,135 @@ TYPE_MAP = {
 def build_api_url(type, method="stream", service_name="default"):
     return "{}/{}/{}?service={}".format(BACKEND, TYPE_MAP[type], method, service_name)
 
+def create_temp_folder(name="GUID"):
+    """
+    Creates a temporal folder for dataset process
+    :param name: name to assign.
+    :return:
+    """
 
-image = Image(uri='/var/www/datasets/test_1484735758.51682/google/8.jpe')
-image.load_from_uri()
+    if name == "GUID":
+        import uuid
+        name = uuid.uuid4()
 
-face_filters = [
-    FaceDetectionFilter(2, build_api_url("face-detection", service_name="opencv-cpu-haarcascade-face-detection"), max_faces=MAX_FACES),
-    FaceDetectionFilter(5, build_api_url("face-detection", service_name="dlib-cpu-hog-svm-face-detection"), max_faces=MAX_FACES),
-    FaceDetectionFilter(8, build_api_url("face-detection", service_name="mt-gpu-caffe-cnn-face-detection"), max_faces=MAX_FACES),
+    if not os.path.exists("/tmp/inferencedb/"):
+        os.mkdir("/tmp/inferencedb/")
+
+    folder = "/tmp/inferencedb/{}".format(name)
+
+    os.mkdir(folder)
+
+    return folder
+
+
+print("Importing dataset from {} ({})".format(source, source_type))
+
+
+if source_type == "DIR":
+    raw_dataset = RawCrawledDataset(source)
+    folder = source
+
+else:
+    folder = create_temp_folder()
+
+    print("Temporal folder on \"{}\"".format(folder))
+    raw_dataset = RawCrawledDataset(folder)
+    raw_dataset.import_from_zip(source)
+
+new_folder = create_temp_folder()
+
+try:
+    raw_dataset.load_dataset()
+    age_dataset = GenericImageAgeDataset(new_folder)
+
+    if len(raw_dataset.get_metadata_content()) == 0:
+        print("Dataset source seems empty or not understandable by the inference filter. Aborted.")
+        print("Ensure that there exists a metadata.json file in the same folder.")
+        exit(-1)
+
+    print("Detected {} elements in raw dataset.".format(len(raw_dataset.get_metadata_content())))
+
+
+    # Let's define the filters:
+
+    face_filter = FaceDetectionFilter(1, build_api_url("face-detection", service_name="mt-gpu-caffe-cnn-face-detection"), min_faces=1)
+
+    # Let's process each image.
+    metadata_content = raw_dataset.get_metadata_content()
+
+    iteration = 0
+    for image_hash, data in metadata_content.items():
+
+        if not 'metadata' in data:
+
+            print("Element {} hierarchy in the metadata is not correct (does not contain metadata for the image's hash "
+                  "key). May it be a different version of dataset? skipped.".format(image_hash))
+            continue
+
+        metadata = data['metadata']
+
+        if not 'uri' in metadata:
+
+            print("Element's {} metadata does not reference any URI. May it be a different version of dataset? "
+                  "skipped.".format(image_hash))
+            continue
+
+        uri = os.path.join(folder, metadata['uri'][0])
+        print("loading {}".format(uri))
+        image = Image(uri)
+        image.load_from_uri()
+
+        if not image.is_loaded():
+            continue
+
+        (faces_detected, weight, reason, bounding_boxes) = face_filter.apply_to(image)
+
+        if not faces_detected:
+            print("No faces detected for file {} ({})".format(image_hash, uri))
+            continue
+
+        print("Detected {} faces in {} ({}): \n{}".format(len(bounding_boxes), image_hash, uri, "\n".join([str(bounding_box) for bounding_box in bounding_boxes])))
+
+        for bounding_box in bounding_boxes:
+
+            bounding_box.expand(0.2)
+            bounding_box.fit_to_size(image.get_size())
+            new_image = image.crop_image(bounding_box, new_uri="None")
+
+            # Let's inference the age.
+            desc = metadata['desc'].split(';')[-1]
+
+            try:
+                age = int(desc[0])
+            except Exception as ex:
+                age = 0
+
+            new_image.metadata=[AgeRange(age, age)]
+            age_dataset.put_image(new_image)
+
+            if iteration % SAVE_BATCH_AMMOUNT == 0:
+                age_dataset.save_dataset()
+
+            iteration += 1
+
+            age_dataset.save_dataset()
+            print("Saved dataset into \"{}\".".format(new_folder))
+finally:
+    if source_type=="FILE":
+        print("Removing temporary folder {}...".format(folder))
+        shutil.rmtree(folder)
+        print("Done.")
+
+    #shutil.rmtree(new_folder)
+
+
+"""face_filters = [
+    FaceDetectionFilter(2, build_api_url("face-detection", service_name="opencv-cpu-haarcascade-face-detection")),
+    FaceDetectionFilter(5, build_api_url("face-detection", service_name="dlib-cpu-hog-svm-face-detection")),
+    FaceDetectionFilter(8, build_api_url("face-detection", service_name="mt-gpu-caffe-cnn-face-detection")),
 ]
+
+
 
 multifilter = Multifilter(face_filters)
 face_scores =  multifilter.apply_to(image)
@@ -38,7 +182,9 @@ bbox_clustering = BoundingBoxClustering(face_scores)
 bbox_clustering.find_clusters()
 bounding_box_clusters = bbox_clustering.get_found_clusters()
 
+
 detection_weight_threshold = int(sum([weight for (_,weight,_,_) in face_scores]) / 2)
+
 
 # Since each image should have only one face, the cluster list should have only one valid group.
 valid_boxes = [bounding_box for bounding_box, weight in bounding_box_clusters.items() if
@@ -86,4 +232,5 @@ valid_ages = {age_range: weight for age_range, weight in age_range_clusters.item
 
 #result, weight, reason, age_range = filter_age.appy_to(crop_image)
 
-print(["{}: {} (from {} threshold)".format(age_range.get_range(), weight, detection_weight_threshold) for age_range, weight in valid_ages.items()])
+#print(["{}: {} (from {} threshold)".format(age_range.get_range(), weight, detection_weight_threshold) for age_range, weight in valid_ages.items()])
+"""

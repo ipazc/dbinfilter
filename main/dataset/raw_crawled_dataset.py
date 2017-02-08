@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import json
 import os
 import shutil
 from main.dataset.dataset import Dataset, ExtensionSet
@@ -44,5 +45,17 @@ class RawCrawledDataset(Dataset):
         self._load_routes()
         self._load_metadata_file()
 
-        if "".join(self.metadata_content) == "":
+    def _load_metadata_file(self):
+        """
+        Loads the metadata content doing some preprocessing to its content.
+        """
+        Dataset._load_metadata_file(self)
+
+        self.metadata_content = "".join(self.metadata_content)
+        if self.metadata_content == "":
             self.metadata_content = "{}"
+
+        self.metadata_content = json.loads(self.metadata_content)
+
+        if 'data' in self.metadata_content:
+            self.metadata_content = self.metadata_content['data']

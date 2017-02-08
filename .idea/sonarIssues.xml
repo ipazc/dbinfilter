@@ -63,6 +63,11 @@
             <set />
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/main/filter/advanced/age_estimation_text_inference_filter.py">
+          <value>
+            <set />
+          </value>
+        </entry>
         <entry key="$PROJECT_DIR$/main/filter/advanced/face_detection_filter.py">
           <value>
             <set />
@@ -114,6 +119,11 @@
           </value>
         </entry>
         <entry key="$PROJECT_DIR$/main/filter_clustering/filter_composition_clustering.py">
+          <value>
+            <set />
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/main/threshold_face.py">
           <value>
             <set />
           </value>

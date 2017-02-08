@@ -48,8 +48,10 @@ class FaceDetectionFilter(BoundingBoxFilter):
         response = requests.put(self.api_url, data=image.get_jpeg())
 
         if response.status_code != 200:
-            raise Exception("Backend ({}) for filtering with {} is returning a bad response!".format(self.api_url,
-                                                                                        FaceDetectionFilter.__name__))
+            raise Exception("Backend ({}) for filtering with {} is returning a bad response({} - {})!".format(self.api_url,
+                                                                                        FaceDetectionFilter.__name__,
+                                                                                                 response.status_code,
+                                                                                                      response.text))
 
         response_json = json.loads(response.text)
 
