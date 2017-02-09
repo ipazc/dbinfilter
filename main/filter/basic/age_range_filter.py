@@ -37,7 +37,9 @@ class AgeRangeFilter(Filter):
 
     def _age_range_check_filter(self, age_range):
         """
-        Checks initial filters against the specified age_range.
+        Checks initial filters against the specified age_range. If there's a capture pattern condition it will also be
+        analyzed against it.
+        :param age_range:
         :return: True if filter passes. False otherwise.
         """
 

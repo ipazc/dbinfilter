@@ -70,6 +70,9 @@ class AgeRangeClustering(FilterCompositionClustering):
 
         min_area = min([age_range1.get_distance(), age_range2.get_distance(), 1])
 
+        if min_area == 0:
+            min_area = 1
+
         intersection = age_range1.intersect_with(age_range2)
         distance = intersection.get_distance()
 

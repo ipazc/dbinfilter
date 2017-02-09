@@ -32,7 +32,7 @@ class Multifilter(Filter):
             filter_list = []
 
         self.filter_list = filter_list
-        self.pool = Pool(len(self.filter_list))
+        self.pool = Pool(processes=len(self.filter_list))
 
     def apply_to(self, resource):
         """
@@ -41,7 +41,8 @@ class Multifilter(Filter):
         :return:
         """
         resource_mapped_filter_list = [[_filter, resource] for _filter in self.filter_list]
-        return self.pool.map(apply_filter, resource_mapped_filter_list)
+        result = self.pool.map(apply_filter, resource_mapped_filter_list)
+        return result
 
     def apply_to_list(self, resource_list):
         """

@@ -110,6 +110,13 @@ class AgeRange(object):
 
         return AgeRange(intersection_min, intersection_max)
 
+    def get_filled_interval(self):
+        """
+        Retrieves the interval filled with elements.
+        :return: list of the interval numbers.
+        """
+        return list(range(self.range[0], self.range[1]+1))
+
     def to_dict(self):
         """
         :return: JSON-Compatible dictionary representation of the age.

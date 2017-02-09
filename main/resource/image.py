@@ -134,6 +134,27 @@ class Image(Resource):
 
         return size
 
+    def resize_to(self, size, keep_aspect=True):
+        """
+        Resizes the blob content to the specified size.
+        :param size: Size to set, or size boundaries if keep aspect is true.
+        :param keep_aspect: keep the aspect ratio of the image.
+        :return:
+        """
+
+        size = list(size)[::-1]
+
+        if keep_aspect:
+            # We find which shape index is bigger than the other
+            shape = self.blob_content.shape[:2]
+            max_index, max_value = max(enumerate(shape), key=lambda v: v[1])
+            ratio = size[max_index] / max_value
+            dim = (size[max_index], int(shape[max_index - 1] * ratio))
+        else:
+            dim = (size[0], size[1])
+
+        self.blob_content = cv2.resize(self.blob_content, dim, interpolation=cv2.INTER_AREA)
+
     def update_blob(self, new_blob):
         """
         Updates the blob of the image.

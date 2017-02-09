@@ -8,6 +8,11 @@
             <set />
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/../CvMlModule/main/model/resource/text.py">
+          <value>
+            <set />
+          </value>
+        </entry>
         <entry key="$PROJECT_DIR$/../dataset-builder/main/dataset/generic_image_age_dataset.py">
           <value>
             <set />
@@ -68,6 +73,11 @@
             <set />
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/main/filter/advanced/constant_age_range_filter.py">
+          <value>
+            <set />
+          </value>
+        </entry>
         <entry key="$PROJECT_DIR$/main/filter/advanced/face_detection_filter.py">
           <value>
             <set />
@@ -79,6 +89,11 @@
           </value>
         </entry>
         <entry key="$PROJECT_DIR$/main/filter/age_range_filter.py">
+          <value>
+            <set />
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/main/filter/basic/age_range_filter.py">
           <value>
             <set />
           </value>
@@ -123,6 +138,16 @@
             <set />
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/main/resource/image.py">
+          <value>
+            <set />
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/main/resource/text.py">
+          <value>
+            <set />
+          </value>
+        </entry>
         <entry key="$PROJECT_DIR$/main/threshold_face.py">
           <value>
             <set />
@@ -134,6 +159,11 @@
           </value>
         </entry>
         <entry key="$PROJECT_DIR$/main/tools/boundingbox.py">
+          <value>
+            <set />
+          </value>
+        </entry>
+        <entry key="$PROJECT_DIR$/test/filter/advance/age_estimation_text_inference_filter_tests.py">
           <value>
             <set />
           </value>

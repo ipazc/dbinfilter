@@ -50,10 +50,10 @@ class AgeRangeClusteringTests(unittest.TestCase):
 
         postprocessed_clusters = {str(age_range.get_range()): weight for age_range, weight in clusters.items()}
 
-        self.assertIn("[5, 7]", postprocessed_clusters)
-        self.assertIn("[2, 6]", postprocessed_clusters)
-        self.assertEqual(postprocessed_clusters["[5, 7]"], 3)
-        self.assertEqual(postprocessed_clusters["[2, 6]"], 8)
+        self.assertIn("[6, 7]", postprocessed_clusters)
+        self.assertIn("[2, 7]", postprocessed_clusters)
+        self.assertEqual(postprocessed_clusters["[6, 7]"], 1)
+        self.assertEqual(postprocessed_clusters["[2, 7]"], 10)
 
 if __name__ == '__main__':
     unittest.main()

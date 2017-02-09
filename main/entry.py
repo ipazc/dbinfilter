@@ -8,16 +8,19 @@ import shutil
 from main.dataset.generic_image_age_dataset import GenericImageAgeDataset
 from main.dataset.raw_crawled_dataset import RawCrawledDataset
 from main.filter.advanced.age_estimation_filter import AgeEstimationFilter
+from main.filter.advanced.age_estimation_text_inference_filter import AgeEstimationTextInferenceFilter
 from main.filter.advanced.face_detection_filter import FaceDetectionFilter
 from main.filter.multifilter import Multifilter
 from main.filter_clustering.age_range_clustering import AgeRangeClustering
 from main.filter_clustering.bounding_box_clustering import BoundingBoxClustering
 from main.resource.image import Image
+from main.resource.text import Text
 from main.tools.age_range import AgeRange
 
 __author__ = "Ivan de Paz Centeno"
 
 SAVE_BATCH_AMMOUNT = 200
+MAX_IMAGE_SIZE = (1200, 1200)
 
 if len(sys.argv) != 2:
     print("A parameter for folder/zip location of the processable dataset is needed.")
@@ -80,10 +83,10 @@ else:
     raw_dataset.import_from_zip(source)
 
 new_folder = create_temp_folder()
+age_dataset = GenericImageAgeDataset(new_folder)
 
 try:
     raw_dataset.load_dataset()
-    age_dataset = GenericImageAgeDataset(new_folder)
 
     if len(raw_dataset.get_metadata_content()) == 0:
         print("Dataset source seems empty or not understandable by the inference filter. Aborted.")
@@ -97,12 +100,94 @@ try:
 
     face_filter = FaceDetectionFilter(1, build_api_url("face-detection", service_name="mt-gpu-caffe-cnn-face-detection"), min_faces=1)
 
+    image_age_filters = [
+        #AgeEstimationFilter(2, build_api_url("face-age-estimation",
+        #                    service_name="gpu-cnn-rothe-real-age-estimation"), min_age=0,
+        #                    max_age=99),
+        #AgeEstimationFilter(2, build_api_url("face-age-estimation",
+        #                                     service_name="gpu-cnn-rothe-apparent-age-estimation"), min_age=0,
+        #                    max_age=99),
+        AgeEstimationFilter(4, build_api_url("face-age-estimation",
+                                             service_name="gpu-cnn-levi-hassner-age-estimation"), min_age=0,
+                            max_age=99),
+    ]
+
+    translate_dict1 = {
+        "zero": 0,
+        "oh": 0,
+        "zip": 0,
+        "zilch": 0,
+        "nada": 0,
+        "bupkis": 0,
+        "one": 1,
+        "two": 2,
+        "three": 3,
+        "four": 4,
+        "five": 5,
+        "six": 6,
+        "seven": 7,
+        "eight": 8,
+        "nine": 9,
+        "ten": 10,
+        "eleven": 11,
+        "twelve": 12,
+        "thirteen": 13,
+        "fourteen": 14,
+        "fifteen": 15,
+        "sixteen": 16,
+        "seventeen": 17,
+        "eighteen": 18,
+        "nineteen": 19,
+    }
+
+    translate_dict2 = {
+        "fir":1,
+        "second":2,
+        "thi":3,
+        "four":4,
+        "five":5,
+        "six":6,
+        "seven":7,
+        "eight":8,
+        "nine":9,
+        "ten":10,
+        "eleven":11,
+        "twelve":12,
+        "thirteen":13,
+        "forteen":14,
+        "fifteen":15,
+        "sixteen":16,
+        "seventeen":17,
+        "eighteen":18,
+        "nineteen":19,
+        "twent":20
+    }
+
+    text_age_filters = [
+        AgeEstimationTextInferenceFilter(5,
+                                         pattern="(?:<b>)?([0-9][0-9]?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|forteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty).?(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:(?:year[']?s?)(?:(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:old)(?:<\/b>)?)|(?:yo))",
+                                         translate_dict=translate_dict1),
+        AgeEstimationTextInferenceFilter(6,
+                                         pattern="(?:baby).*(?:<b>)?([0-9][0-9]?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|forteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty).?(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:(?:year[']?s?)(?:(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:old)(?:<\/b>)?)|(?:yo))",
+                                         translate_dict=translate_dict1, max_age=3),
+        AgeEstimationTextInferenceFilter(6,
+                                         pattern="(?:<b>)?([0-9][0-9]?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|forteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty).?(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:(?:year[']?s?)(?:(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:old)(?:<\/b>)?)|(?:yo)).*(?:baby)",
+                                         translate_dict=translate_dict1, max_age=3),
+        AgeEstimationTextInferenceFilter(7,
+                                         pattern="(?:<b>)?([0-9][0-9]?|fir|second|thi|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|forteen|fifteen|sixteen|seventeen|eighteen|nineteen|twent)(?:st|nd|rd|th|ieth)?(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:birthday)(?:<\/b>)?",
+                                         translate_dict=translate_dict2)
+    ]
+
+    image_multifilter = Multifilter(image_age_filters)
+    text_multifilter = Multifilter(text_age_filters)
     # Let's process each image.
     metadata_content = raw_dataset.get_metadata_content()
 
     iteration = 0
+    size_metadata = len(metadata_content)
+    count = 0
     for image_hash, data in metadata_content.items():
-
+        count +=1
         if not 'metadata' in data:
 
             print("Element {} hierarchy in the metadata is not correct (does not contain metadata for the image's hash "
@@ -110,6 +195,7 @@ try:
             continue
 
         metadata = data['metadata']
+        text = Text(content=metadata['desc'])
 
         if not 'uri' in metadata:
 
@@ -125,6 +211,9 @@ try:
         if not image.is_loaded():
             continue
 
+        if image.get_size() > MAX_IMAGE_SIZE:
+            image.resize_to(MAX_IMAGE_SIZE)
+
         (faces_detected, weight, reason, bounding_boxes) = face_filter.apply_to(image)
 
         if not faces_detected:
@@ -136,9 +225,10 @@ try:
         for bounding_box in bounding_boxes:
 
             bounding_box.expand(0.2)
-            bounding_box.fit_to_size(image.get_size())
+            bounding_box.fit_in_size(image.get_size())
             new_image = image.crop_image(bounding_box, new_uri="None")
 
+            print(metadata['desc'])
             # Let's inference the age.
             desc = metadata['desc'].split(';')[-1]
 
@@ -147,17 +237,36 @@ try:
             except Exception as ex:
                 age = 0
 
-            new_image.metadata=[AgeRange(age, age)]
+            face_age_scores = text_multifilter.apply_to(text) + image_multifilter.apply_to(new_image) #+ text_multifilter.apply_to(text)
+
+            # Let's discard all those scores that didn't pass the filter.
+            face_age_scores = [(result, weight, reason, age) for (result, weight, reason, age) in face_age_scores if result]
+
+            [print(age, "x", weight) for (result, weight, reason, age) in face_age_scores if result]
+            # Now we need to map the scores into a list.
+            ages_list = []
+            for (result, weight, reason, age) in face_age_scores:
+                ages_list += age.get_range() * weight
+
+            reduced_list = AgeEstimationTextInferenceFilter.ivan_algorithm(ages_list)
+
+            age_range = AgeRange(int(min(reduced_list)), int(max(reduced_list)))
+
+            print("Inferred age: {}".format(age_range))
+
+            new_image.metadata=[age_range]
             age_dataset.put_image(new_image)
 
             if iteration % SAVE_BATCH_AMMOUNT == 0:
+                print("[{}%] Saved dataset into \"{}\".".format(round(count/size_metadata * 100, 2), new_folder))
                 age_dataset.save_dataset()
 
             iteration += 1
 
-            age_dataset.save_dataset()
-            print("Saved dataset into \"{}\".".format(new_folder))
 finally:
+    print("Saved dataset into \"{}\".".format(new_folder))
+    age_dataset.save_dataset()
+
     if source_type=="FILE":
         print("Removing temporary folder {}...".format(folder))
         shutil.rmtree(folder)
