@@ -11,8 +11,6 @@ from main.filter.advanced.age_estimation_filter import AgeEstimationFilter
 from main.filter.advanced.age_estimation_text_inference_filter import AgeEstimationTextInferenceFilter
 from main.filter.advanced.face_detection_filter import FaceDetectionFilter
 from main.filter.multifilter import Multifilter
-from main.filter_clustering.age_range_clustering import AgeRangeClustering
-from main.filter_clustering.bounding_box_clustering import BoundingBoxClustering
 from main.resource.image import Image
 from main.resource.text import Text
 from main.tools.age_range import AgeRange
@@ -21,6 +19,7 @@ __author__ = "Ivan de Paz Centeno"
 
 SAVE_BATCH_AMMOUNT = 200
 MAX_IMAGE_SIZE = (1200, 1200)
+AGE_GROUPING_SIZE = 2
 
 if len(sys.argv) != 2:
     print("A parameter for folder/zip location of the processable dataset is needed.")
@@ -229,6 +228,7 @@ try:
             new_image = image.crop_image(bounding_box, new_uri="None")
 
             print(metadata['desc'])
+
             # Let's inference the age.
             desc = metadata['desc'].split(';')[-1]
 
@@ -240,10 +240,11 @@ try:
             face_age_scores = text_multifilter.apply_to(text) + image_multifilter.apply_to(new_image) #+ text_multifilter.apply_to(text)
 
             # Let's discard all those scores that didn't pass the filter.
-            face_age_scores = [(result, weight, reason, age) for (result, weight, reason, age) in face_age_scores if result]
+            face_age_scores = [(passed, weight, reason, age) for (passed, weight, reason, age) in face_age_scores if passed]
 
             [print(age, "x", weight) for (result, weight, reason, age) in face_age_scores if result]
-            # Now we need to map the scores into a list.
+
+            # Now we need to map the age ranges into a list.
             ages_list = []
             for (result, weight, reason, age) in face_age_scores:
                 ages_list += age.get_range() * weight
@@ -252,7 +253,16 @@ try:
 
             age_range = AgeRange(int(min(reduced_list)), int(max(reduced_list)))
 
-            print("Inferred age: {}".format(age_range))
+            print("Inferred age: {}".format(age_range), end="")
+
+            # Let's fit the inferred age range inside an age group
+            mean_age = age_range.get_mean()
+
+            min_age = int(mean_age / AGE_GROUPING_SIZE) * AGE_GROUPING_SIZE        # This is not equal to "mean_age", they are INTEGERS, not REALS!
+            max_age = min_age + AGE_GROUPING_SIZE-1
+            age_range = AgeRange(min_age, max_age)
+
+            print("; fitted age in group {}".format(age_range))
 
             new_image.metadata=[age_range]
             age_dataset.put_image(new_image)

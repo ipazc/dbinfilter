@@ -2,18 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="65ba4bd5-5c02-4276-ae09-e9857fc298ad" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/dbinfilter.iml" afterPath="$PROJECT_DIR$/.idea/dbinfilter.iml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/sonarIssues.xml" afterPath="$PROJECT_DIR$/.idea/sonarIssues.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/main/entry.py" afterPath="$PROJECT_DIR$/main/entry.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/main/filter/advanced/age_estimation_text_inference_filter.py" afterPath="$PROJECT_DIR$/main/filter/advanced/age_estimation_text_inference_filter.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/main/filter/basic/age_range_filter.py" afterPath="$PROJECT_DIR$/main/filter/basic/age_range_filter.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/main/filter/multifilter.py" afterPath="$PROJECT_DIR$/main/filter/multifilter.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/main/filter_clustering/age_range_clustering.py" afterPath="$PROJECT_DIR$/main/filter_clustering/age_range_clustering.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/main/resource/image.py" afterPath="$PROJECT_DIR$/main/resource/image.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/main/tools/age_range.py" afterPath="$PROJECT_DIR$/main/tools/age_range.py" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/test/filter_clustering/age_range_clustering_tests.py" afterPath="$PROJECT_DIR$/test/filter_clustering/age_range_clustering_tests.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -31,8 +20,8 @@
       <file leaf-file-name="entry.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main/entry.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="194">
-              <caret line="172" column="43" lean-forward="true" selection-start-line="172" selection-start-column="43" selection-end-line="172" selection-end-column="43" />
+            <state relative-caret-position="150">
+              <caret line="260" column="66" lean-forward="true" selection-start-line="260" selection-start-column="66" selection-end-line="260" selection-end-column="66" />
               <folding>
                 <element signature="e#46#55#0" expanded="true" />
               </folding>
@@ -1025,8 +1014,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/main/entry.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="194">
-          <caret line="172" column="43" lean-forward="true" selection-start-line="172" selection-start-column="43" selection-end-line="172" selection-end-column="43" />
+        <state relative-caret-position="150">
+          <caret line="260" column="66" lean-forward="true" selection-start-line="260" selection-start-column="66" selection-end-line="260" selection-end-column="66" />
           <folding>
             <element signature="e#46#55#0" expanded="true" />
           </folding>
