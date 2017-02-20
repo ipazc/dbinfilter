@@ -20,6 +20,7 @@ __author__ = "Ivan de Paz Centeno"
 SAVE_BATCH_AMMOUNT = 200
 MAX_IMAGE_SIZE = (1200, 1200)
 AGE_GROUPING_SIZE = 2
+EXPECTED_AGE_RANGE = AgeRange(0, 4)
 
 if len(sys.argv) != 2:
     print("A parameter for folder/zip location of the processable dataset is needed.")
@@ -106,7 +107,7 @@ try:
         #AgeEstimationFilter(2, build_api_url("face-age-estimation",
         #                                     service_name="gpu-cnn-rothe-apparent-age-estimation"), min_age=0,
         #                    max_age=99),
-        AgeEstimationFilter(4, build_api_url("face-age-estimation",
+        AgeEstimationFilter(6, build_api_url("face-age-estimation",
                                              service_name="gpu-cnn-levi-hassner-age-estimation"), min_age=0,
                             max_age=99),
     ]
@@ -162,8 +163,14 @@ try:
         "twent":20
     }
 
+    search_keywords_filters = [
+        AgeEstimationTextInferenceFilter(4,
+                                         pattern="(?:<b>)?([0-9][0-9]?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|forteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty).?(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:(?:year[']?s?)(?:(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:old)(?:<\/b>)?)|(?:yo))",
+                                         translate_dict=translate_dict1),
+    ]
+
     text_age_filters = [
-        AgeEstimationTextInferenceFilter(5,
+        AgeEstimationTextInferenceFilter(10,
                                          pattern="(?:<b>)?([0-9][0-9]?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|forteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty).?(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:(?:year[']?s?)(?:(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:old)(?:<\/b>)?)|(?:yo))",
                                          translate_dict=translate_dict1),
         AgeEstimationTextInferenceFilter(6,
@@ -172,13 +179,15 @@ try:
         AgeEstimationTextInferenceFilter(6,
                                          pattern="(?:<b>)?([0-9][0-9]?|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|forteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty).?(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:(?:year[']?s?)(?:(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:old)(?:<\/b>)?)|(?:yo)).*(?:baby)",
                                          translate_dict=translate_dict1, max_age=3),
-        AgeEstimationTextInferenceFilter(7,
+        AgeEstimationTextInferenceFilter(9,
                                          pattern="(?:<b>)?([0-9][0-9]?|fir|second|thi|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|forteen|fifteen|sixteen|seventeen|eighteen|nineteen|twent)(?:st|nd|rd|th|ieth)?(?:<\/b>)?(?:[ ]|[-])(?:<b>)?(?:birthday)(?:<\/b>)?",
                                          translate_dict=translate_dict2)
     ]
 
     image_multifilter = Multifilter(image_age_filters)
     text_multifilter = Multifilter(text_age_filters)
+    search_keywords_multifilter = Multifilter(search_keywords_filters)
+
     # Let's process each image.
     metadata_content = raw_dataset.get_metadata_content()
 
@@ -195,6 +204,9 @@ try:
 
         metadata = data['metadata']
         text = Text(content=metadata['desc'])
+        search_keywords_text = Text(content="; ".join(metadata['searchwords']))
+        print(text.get_content())
+        print(search_keywords_text.get_content())
 
         if not 'uri' in metadata:
 
@@ -213,7 +225,12 @@ try:
         if image.get_size() > MAX_IMAGE_SIZE:
             image.resize_to(MAX_IMAGE_SIZE)
 
-        (faces_detected, weight, reason, bounding_boxes) = face_filter.apply_to(image)
+        try:
+            (faces_detected, weight, reason, bounding_boxes) = face_filter.apply_to(image)
+
+        except Exception as ex:
+            print("Backend failed for image \"{}\"".format(image.get_uri()))
+            faces_detected = False
 
         if not faces_detected:
             print("No faces detected for file {} ({})".format(image_hash, uri))
@@ -227,33 +244,35 @@ try:
             bounding_box.fit_in_size(image.get_size())
             new_image = image.crop_image(bounding_box, new_uri="None")
 
-            print(metadata['desc'])
-
-            # Let's inference the age.
-            desc = metadata['desc'].split(';')[-1]
-
-            try:
-                age = int(desc[0])
-            except Exception as ex:
-                age = 0
-
-            face_age_scores = text_multifilter.apply_to(text) + image_multifilter.apply_to(new_image) #+ text_multifilter.apply_to(text)
+            face_age_scores = text_multifilter.apply_to(text) \
+                              + search_keywords_multifilter.apply_to(search_keywords_text) \
+                              + image_multifilter.apply_to(new_image)
 
             # Let's discard all those scores that didn't pass the filter.
             face_age_scores = [(passed, weight, reason, age) for (passed, weight, reason, age) in face_age_scores if passed]
 
-            [print(age, "x", weight) for (result, weight, reason, age) in face_age_scores if result]
+            filtered_face_age_scores = [(age, weight) for (result, weight, reason, age) in face_age_scores if result]
 
-            # Now we need to map the age ranges into a list.
-            ages_list = []
-            for (result, weight, reason, age) in face_age_scores:
-                ages_list += age.get_range() * weight
+            [print(age, "x", weight) for (age, weight) in filtered_face_age_scores]
 
-            reduced_list = AgeEstimationTextInferenceFilter.ivan_algorithm(ages_list)
 
-            age_range = AgeRange(int(min(reduced_list)), int(max(reduced_list)))
+            if len(filtered_face_age_scores) <= 2:
 
-            print("Inferred age: {}".format(age_range), end="")
+                # Now we need to map the age ranges into a list.
+                ages_list = []
+                for (age, weight) in filtered_face_age_scores:
+                    ages_list += age.get_range() * weight
+
+                reduced_list = AgeEstimationTextInferenceFilter.ivan_algorithm(ages_list)
+
+                age_range = AgeRange(int(min(reduced_list)), int(max(reduced_list)))
+
+                print("Inferred age: {}".format(age_range), end="")
+
+            else:
+                # Bad, only two filters were effective here.
+                # This image is not trustworthy. Let's discard it into the unknown group.
+                age_range=AgeRange(99, 99)
 
             # Let's fit the inferred age range inside an age group
             mean_age = age_range.get_mean()
@@ -261,6 +280,11 @@ try:
             min_age = int(mean_age / AGE_GROUPING_SIZE) * AGE_GROUPING_SIZE        # This is not equal to "mean_age", they are INTEGERS, not REALS!
             max_age = min_age + AGE_GROUPING_SIZE-1
             age_range = AgeRange(min_age, max_age)
+
+            if min_age < EXPECTED_AGE_RANGE.get_range()[0] or max_age > EXPECTED_AGE_RANGE.get_range()[1]:
+                # This is not within the expected age range... let's discard this sample.
+                print("Discarded image as it overpasses expected age range.")
+                continue
 
             print("; fitted age in group {}".format(age_range))
 

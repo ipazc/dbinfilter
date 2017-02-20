@@ -71,6 +71,7 @@ class AgeEstimationTextInferenceFilter(AgeRangeFilter):
                 except Exception as ex:
                     ages_strings.append(age)
 
+        """
         if len(possible_ages) > 1:
             # We give more confidence to the attached text instead of the search query string.
             # The search query string is always the latest age of the list.
@@ -85,6 +86,7 @@ class AgeEstimationTextInferenceFilter(AgeRangeFilter):
                     new_possible_ages += [age, age]
 
             possible_ages = new_possible_ages
+        """
 
         # We have a list of possible ages for this text inside possible_ages.
         reduced_ages = self.ivan_algorithm(possible_ages)

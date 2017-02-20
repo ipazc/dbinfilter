@@ -52,7 +52,7 @@ class AgeEstimationFilter(AgeRangeFilter):
 
         response_json = json.loads(response.text)
         if 'Age_range' not in response_json:
-            raise Exception("This filter does not understand backend language. It may be a different version.")
+            raise Exception("This filter does not understand backend's language. It may be a different version.")
 
         age_range = AgeRange.from_string(response_json['Age_range'])
 

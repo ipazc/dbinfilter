@@ -147,13 +147,24 @@ class Image(Resource):
         if keep_aspect:
             # We find which shape index is bigger than the other
             shape = self.blob_content.shape[:2]
-            max_index, max_value = max(enumerate(shape), key=lambda v: v[1])
-            ratio = size[max_index] / max_value
-            dim = (size[max_index], int(shape[max_index - 1] * ratio))
+
+            if shape[0] > size[0]:
+                ratio = size[0] / shape[0]
+                shape = (size[0], int(shape[1] * ratio))
+                print(shape)
+
+            if shape[1] > size[1]:
+                ratio = size[1] / shape[1]
+                print(ratio)
+                shape = (int(shape[0] * ratio), size[1])
+                print(shape)
+
+            dim = shape
+
         else:
             dim = (size[0], size[1])
 
-        self.blob_content = cv2.resize(self.blob_content, dim, interpolation=cv2.INTER_AREA)
+        self.blob_content = cv2.resize(self.blob_content, dim[::-1], interpolation=cv2.INTER_AREA)
 
     def update_blob(self, new_blob):
         """
